@@ -4,6 +4,8 @@ import { GrpcMethod } from '@nestjs/microservices';
 import type {
   CreateUserRequest,
   CreateUserResponse,
+  GetRangeUsersByIdRequest,
+  GetRangeUsersByIdResponse,
   GetUserRequest,
   GetUserResponse,
 } from '@voice-chat/contracts/gen/user';
@@ -22,5 +24,14 @@ export class UserController {
   async createUser(dto: CreateUserRequest): Promise<CreateUserResponse> {
     const user = await this.userService.createUser(dto);
     return { user: user ?? undefined };
+  }
+
+  @GrpcMethod('UserService', 'GetRangeUsersById')
+  async getUsersById(
+    dto: GetRangeUsersByIdRequest,
+  ): Promise<GetRangeUsersByIdResponse> {
+    const users = await this.userService.getUsersById(dto);
+
+    return { users };
   }
 }

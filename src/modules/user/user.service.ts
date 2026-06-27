@@ -1,19 +1,24 @@
 import { Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import {
+  GetRangeUsersByIdRequest,
   GetUserRequest,
   type CreateUserRequest,
-  type User,
 } from '@voice-chat/contracts/gen/user';
 import { UserRepository } from './user.repository';
 import { User as PrismaUser } from 'prisma/generated/client';
 import { RpcStatus } from '@voice-chat/common';
+import type { UserProfile } from '@voice-chat/contracts/gen/common';
+import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 
 @Injectable()
 export class UserService {
-  constructor(private readonly userRespository: UserRepository) {}
+  constructor(
+    private readonly userRespository: UserRepository,
+    private readonly prisma: PrismaService,
+  ) {}
 
-  async getUser(dto: GetUserRequest): Promise<User | null> {
+  async getUser(dto: GetUserRequest) {
     try {
       const user = await this.userRespository.getUserBy({
         id: dto.userId,
@@ -32,7 +37,7 @@ export class UserService {
     }
   }
 
-  async createUser(dto: CreateUserRequest): Promise<User> {
+  async createUser(dto: CreateUserRequest) {
     try {
       const user = await this.userRespository.create(dto);
       return this._mapUserEntityToGrpcEntity(user);
@@ -44,18 +49,28 @@ export class UserService {
     }
   }
 
-  private _mapUserEntityToGrpcEntity(user: PrismaUser) {
+  async getUsersById(request: GetRangeUsersByIdRequest) {
+    const { usersId } = request;
+
+    const users = await this.prisma.user.findMany({
+      where: {
+        id: {
+          in: usersId,
+        },
+      },
+    });
+
+    if (!users.length) return [];
+
+    return users.map((user) => this._mapUserEntityToGrpcEntity(user));
+  }
+
+  private _mapUserEntityToGrpcEntity(user: PrismaUser): UserProfile {
     return {
       ...user,
       avatarUrl: user?.avatarUrl ?? '',
-      createdAt: {
-        seconds: Math.floor(user.createdAt.getTime() / 1000),
-        nanos: Math.floor((user.createdAt.getTime() % 1000) * 1_000_000),
-      },
-      updatedAt: {
-        seconds: Math.floor(user.updatedAt.getTime() / 1000),
-        nanos: Math.floor((user.updatedAt.getTime() % 1000) * 1_000_000),
-      },
+      createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString(),
     };
   }
 }
