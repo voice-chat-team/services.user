@@ -17,6 +17,7 @@ export class UserController {
   @GrpcMethod('UserService', 'GetUser')
   async getUser(dto: GetUserRequest): Promise<GetUserResponse> {
     const user = await this.userService.getUser(dto);
+    console.log(user);
     return { user: user ?? undefined };
   }
 
