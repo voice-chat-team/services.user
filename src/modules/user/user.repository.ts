@@ -7,7 +7,10 @@ import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 export class UserRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getUserBy(whereInput: UserWhereUniqueInput): Promise<User | null> {
+  async getUserBy(
+    whereInput: UserWhereUniqueInput,
+    withUserPasswordHash: boolean,
+  ): Promise<User | null> {
     return await this.prisma.user.findFirst({
       where: {
         OR: [
@@ -17,12 +20,30 @@ export class UserRepository {
           { avatarUrl: whereInput.avatarUrl },
         ],
       },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        avatarUrl: true,
+        passwordHash: withUserPasswordHash ? true : false,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
   }
 
-  async create(data: UserCreateInput): Promise<User> {
+  async create(data: UserCreateInput): Promise<Omit<User, 'passwordHash'>> {
     return await this.prisma.user.create({
       data,
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        avatarUrl: true,
+        passwordHash: false,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
   }
 }

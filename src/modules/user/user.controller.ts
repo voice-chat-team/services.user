@@ -6,6 +6,8 @@ import type {
   CreateUserResponse,
   GetRangeUsersByIdRequest,
   GetRangeUsersByIdResponse,
+  GetUserForAuthRequest,
+  GetUserForAuthResponse,
   GetUserRequest,
   GetUserResponse,
 } from '@voice-chat/contracts/gen/user';
@@ -18,6 +20,14 @@ export class UserController {
   async getUser(dto: GetUserRequest): Promise<GetUserResponse> {
     const user = await this.userService.getUser(dto);
     return { user: user ?? undefined };
+  }
+
+  @GrpcMethod('UserService', 'GetUserForAuth')
+  async getUserForAuth(
+    dto: GetUserForAuthRequest,
+  ): Promise<GetUserForAuthResponse> {
+    const authUser = await this.userService.getUserForAuth(dto);
+    return { user: authUser ?? undefined };
   }
 
   @GrpcMethod('UserService', 'CreateUser')

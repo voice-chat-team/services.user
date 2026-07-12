@@ -3,8 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: tankistpro512/voice-chat-user-service:latest
     container_name: voice-chat-user-service
-    env_file: .env.production.local
     networks:
       - voice-chat-network
     restart: unless-stopped

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import {
   GetRangeUsersByIdRequest,
+  GetUserForAuthRequest,
   GetUserRequest,
   type CreateUserRequest,
 } from '@voice-chat/contracts/gen/user';
@@ -20,15 +21,45 @@ export class UserService {
 
   async getUser(dto: GetUserRequest) {
     try {
-      const user = await this.userRespository.getUserBy({
-        id: dto.userId,
-        username: dto.username,
-        email: dto.email,
-      });
+      const user = await this.userRespository.getUserBy(
+        {
+          id: dto.userId,
+          username: dto.username,
+          email: dto.email,
+        },
+        false,
+      );
 
       if (!user) return null;
 
       return this._mapUserEntityToGrpcEntity(user);
+    } catch {
+      throw new RpcException({
+        code: RpcStatus.NOT_FOUND,
+        details: 'Пользователь не найден',
+      });
+    }
+  }
+
+  async getUserForAuth(dto: GetUserForAuthRequest) {
+    try {
+      const user = await this.userRespository.getUserBy(
+        {
+          id: dto.userId,
+          username: dto.username,
+          email: dto.email,
+        },
+        true,
+      );
+
+      if (!user) return null;
+
+      return {
+        ...user,
+        avatarUrl: user?.avatarUrl ?? '',
+        createdAt: user.createdAt?.toISOString() ?? '',
+        updatedAt: user.updatedAt?.toISOString() ?? '',
+      };
     } catch {
       throw new RpcException({
         code: RpcStatus.NOT_FOUND,
@@ -58,6 +89,15 @@ export class UserService {
           in: usersId,
         },
       },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        avatarUrl: true,
+        passwordHash: false,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
 
     if (!users.length) return [];
@@ -65,12 +105,14 @@ export class UserService {
     return users.map((user) => this._mapUserEntityToGrpcEntity(user));
   }
 
-  private _mapUserEntityToGrpcEntity(user: PrismaUser): UserProfile {
+  private _mapUserEntityToGrpcEntity(
+    user: Omit<PrismaUser, 'passwordHash'>,
+  ): UserProfile {
     return {
       ...user,
       avatarUrl: user?.avatarUrl ?? '',
-      createdAt: user.createdAt.toISOString(),
-      updatedAt: user.updatedAt.toISOString(),
+      createdAt: user.createdAt?.toISOString() ?? '',
+      updatedAt: user.updatedAt?.toISOString() ?? '',
     };
   }
 }
